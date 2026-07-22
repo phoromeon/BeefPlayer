@@ -59,6 +59,16 @@ void MainWindow::createMenus()
     //controlNext->setShortcut(QKeySequence(Qt::Key_Right));
     //controlPlayPause->setShortcut(QKeySequence(Qt::Key_Space));
     aboutMenu = menuBar()->addMenu("About");
+    aboutInfo = new QAction("About", this);
+    aboutMenu->addAction(aboutInfo);
+
+    connect(actionOpen, &QAction::triggered, this, &MainWindow::onActionOpen);
+    connect(actionClose, &QAction::triggered, this, &MainWindow::onActionClose);
+    connect(actionExit, &QAction::triggered, this, &MainWindow::onActionExit);
+    connect(controlPlayPause, &QAction::triggered, this, &MainWindow::onControlPlayPause);
+    connect(controlPrev, &QAction::triggered, this, &MainWindow::onControlPrev);
+    connect(controlNext, &QAction::triggered, this, &MainWindow::onControlNext);
+    connect(aboutInfo, &QAction::triggered, this, &MainWindow::onAboutMenu);
 }
 
 void MainWindow::createComponents()
@@ -93,13 +103,6 @@ void MainWindow::createComponents()
     layout->addWidget(label_Company, 2, 0);
     layout->addWidget(editCompany, 2, 1);
     layout->addWidget(label_Tracks, 3, 0);
-
-    connect(actionOpen, &QAction::triggered, this, &MainWindow::onActionOpen);
-    connect(actionClose, &QAction::triggered, this, &MainWindow::onActionClose);
-    connect(actionExit, &QAction::triggered, this, &MainWindow::onActionExit);
-    connect(controlPlayPause, &QAction::triggered, this, &MainWindow::onControlPlayPause);
-    connect(controlPrev, &QAction::triggered, this, &MainWindow::onControlPrev);
-    connect(controlNext, &QAction::triggered, this, &MainWindow::onControlNext);
 }
 
 void MainWindow::initDevice()
@@ -230,7 +233,7 @@ void MainWindow::onActionOpen()
                                   .arg(gmeDecoder.GetTrackCount()));
 
         // 设置曲目并开始播放
-        gmeDecoder.SetTrack(songIndex);
+        gmeDecoder.SetTrack(0);
         m_audioDevice = m_audioSink->start();
         m_timer->start();
         isPlaying = true;
@@ -338,4 +341,15 @@ void MainWindow::onAudioStateChanged(QAudio::State state)
             qDebug() << "Audio error:" << m_audioSink->error();
         }
     }
+}
+
+void MainWindow::onAboutMenu()
+{
+    QString html;
+    html = "<h2>BeefPlayer</h2>"
+          "<p>Game Music Player</p>"
+          "<p>Version: 0.95</p>"
+          "<p>Powered by <a href='https://github.com/libgme/game-music-emu'>libgme</a></p>"
+          "<p>Developed by: <b>kewen</b></p>";
+    QMessageBox::about(this, "About", html);
 }

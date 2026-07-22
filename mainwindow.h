@@ -40,6 +40,7 @@ private:
     QMenu* controlMenu;
     QAction *controlPrev,*controlNext,*controlPlayPause;
     QMenu* aboutMenu;
+    QAction *aboutInfo;
     QLabel* label_Game;
     QLabel* label_Composer;
     QLabel* label_Company;
@@ -68,5 +69,6 @@ private slots:
     void onControlPlayPause();
     void getAudioData();
     void onAudioStateChanged(QAudio::State state);
+    void onAboutMenu();
 };
 #endif // MAINWINDOW_H
