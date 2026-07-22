@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QTimer>
 #include <QtMultimedia/QAudioSink>
+#include <QKeyEvent>
 #include "GmeDecoder.h"
 
 QT_BEGIN_NAMESPACE
@@ -27,6 +28,9 @@ public:
     void createComponents();
     void initDevice();
     void cleanupPlayback();
+    void changeTrack();
+protected:
+    void keyPressEvent(QKeyEvent*);
 
 private:
     //compounents
@@ -58,6 +62,10 @@ private:
 private slots:
     void onActionOpen();
     void onActionClose();
+    void onActionExit();
+    void onControlPrev();
+    void onControlNext();
+    void onControlPlayPause();
     void getAudioData();
     void onAudioStateChanged(QAudio::State state);
 };

@@ -27,8 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
     createComponents();
     initDevice();
 
-    connect(actionOpen, &QAction::triggered, this, &MainWindow::onActionOpen);
-    connect(actionClose, &QAction::triggered, this, &MainWindow::onActionClose);
+
 }
 
 MainWindow::~MainWindow()
@@ -55,7 +54,10 @@ void MainWindow::createMenus()
     controlMenu->addAction(controlPrev);
     controlMenu->addAction(controlNext);
     controlMenu->addAction(controlPlayPause);
-
+    // 为 Control 菜单的 Action 添加快捷键
+    //controlPrev->setShortcut(QKeySequence(Qt::Key_Left));
+    //controlNext->setShortcut(QKeySequence(Qt::Key_Right));
+    //controlPlayPause->setShortcut(QKeySequence(Qt::Key_Space));
     aboutMenu = menuBar()->addMenu("About");
 }
 
@@ -78,6 +80,10 @@ void MainWindow::createComponents()
     editGame->setReadOnly(true);
     editComposer->setReadOnly(true);
     editCompany->setReadOnly(true);
+    // 让所有 QLineEdit 不抢焦点
+    editGame->setFocusPolicy(Qt::NoFocus);
+    editComposer->setFocusPolicy(Qt::NoFocus);
+    editCompany->setFocusPolicy(Qt::NoFocus);
 
     // 设置布局
     layout->addWidget(label_Game, 0, 0);
@@ -87,6 +93,13 @@ void MainWindow::createComponents()
     layout->addWidget(label_Company, 2, 0);
     layout->addWidget(editCompany, 2, 1);
     layout->addWidget(label_Tracks, 3, 0);
+
+    connect(actionOpen, &QAction::triggered, this, &MainWindow::onActionOpen);
+    connect(actionClose, &QAction::triggered, this, &MainWindow::onActionClose);
+    connect(actionExit, &QAction::triggered, this, &MainWindow::onActionExit);
+    connect(controlPlayPause, &QAction::triggered, this, &MainWindow::onControlPlayPause);
+    connect(controlPrev, &QAction::triggered, this, &MainWindow::onControlPrev);
+    connect(controlNext, &QAction::triggered, this, &MainWindow::onControlNext);
 }
 
 void MainWindow::initDevice()
@@ -146,6 +159,34 @@ void MainWindow::cleanupPlayback()
     label_Tracks->setText("__/__");
 }
 
+void MainWindow::changeTrack()
+{
+    gmeDecoder.SetTrack(songIndex);
+    label_Tracks->setText(QString("%1/%2")
+                              .arg(songIndex + 1)
+                              .arg(gmeDecoder.GetTrackCount()));
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    qDebug() << "Key pressed:" << event->key();
+    switch(event->key())
+    {
+    case Qt::Key_Left:
+        onControlPrev();
+        qDebug() << "Left key pressed.";
+        break;
+    case Qt::Key_Right:
+        onControlNext();
+        qDebug() << "Right key pressed.";
+        break;
+    case Qt::Key_Space:
+        onControlPlayPause();
+        qDebug() << "Space pressed.";
+        break;
+    }
+}
+
 void MainWindow::onActionOpen()
 {
     // 如果已有文件打开，先清理
@@ -200,6 +241,53 @@ void MainWindow::onActionClose()
 {
     if (isOpened) {
         cleanupPlayback();
+    }
+}
+
+void MainWindow::onActionExit()
+{
+    exit(0);
+}
+
+void MainWindow::onControlPrev()
+{
+    if(!isOpened)return;
+    if(!isPlaying)return;
+    if(songIndex > 0)
+    {
+        songIndex--;
+    }
+    changeTrack();
+}
+
+void MainWindow::onControlNext()
+{
+    if(!isOpened)return;
+    if(!isPlaying)return;
+    if(songIndex < gmeDecoder.GetTrackCount() - 1)
+    {
+        songIndex++;
+    }
+    changeTrack();
+}
+
+void MainWindow::onControlPlayPause()
+{
+    //should be opened.
+    if(isOpened)
+    {
+        if(isPlaying)
+        {
+            m_timer->stop();
+            m_audioSink->suspend();
+            isPlaying = false;
+        }
+        else
+        {
+            m_timer->start();
+            m_audioSink->resume();
+            isPlaying = true;
+        }
     }
 }
 
