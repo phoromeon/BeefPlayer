@@ -21,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowTitle("BeefPlayer");
+
     setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     createMenus();
@@ -85,6 +86,7 @@ void MainWindow::createComponents()
     editComposer = new QLineEdit("%2", central);
     label_Company = new QLabel("Co.Ltd:", central);
     editCompany = new QLineEdit("%3", central);
+    label_CurTrack = new QLabel("Current Song:", central);
     label_Tracks = new QLabel("__/__", central);
 
     editGame->setReadOnly(true);
@@ -102,7 +104,8 @@ void MainWindow::createComponents()
     layout->addWidget(editComposer, 1, 1);
     layout->addWidget(label_Company, 2, 0);
     layout->addWidget(editCompany, 2, 1);
-    layout->addWidget(label_Tracks, 3, 0);
+    layout->addWidget(label_CurTrack, 3, 0);
+    layout->addWidget(label_Tracks, 3, 1);
 }
 
 void MainWindow::initDevice()
@@ -177,15 +180,23 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     {
     case Qt::Key_Left:
         onControlPrev();
-        qDebug() << "Left key pressed.";
+        qDebug() << "Switch to Previous song.";
         break;
     case Qt::Key_Right:
         onControlNext();
-        qDebug() << "Right key pressed.";
+        qDebug() << "Switch to next song.";
         break;
     case Qt::Key_Space:
         onControlPlayPause();
         qDebug() << "Space pressed.";
+        break;
+    case Qt::Key_Up:
+        onControlPrevBy10();
+        qDebug() << "Switch to Previous song by 10.";
+        break;
+    case Qt::Key_Down:
+        onControlNextBy10();
+        qDebug() << "Switch to Next song by 10.";
         break;
     }
 }
@@ -223,6 +234,7 @@ void MainWindow::onActionOpen()
         isOpened = true;
         isPlaying = false;  // 先设为 false，等 start 后再设 true
 
+        songIndex = 0;
         // 更新 UI
         info = gmeDecoder.GetGameInfo();
         editGame->setText(QString("%1").arg(info.game));
@@ -233,7 +245,7 @@ void MainWindow::onActionOpen()
                                   .arg(gmeDecoder.GetTrackCount()));
 
         // 设置曲目并开始播放
-        gmeDecoder.SetTrack(0);
+        gmeDecoder.SetTrack(songIndex);
         m_audioDevice = m_audioSink->start();
         m_timer->start();
         isPlaying = true;
@@ -263,6 +275,21 @@ void MainWindow::onControlPrev()
     changeTrack();
 }
 
+void MainWindow::onControlPrevBy10()
+{
+    if(!isOpened)return;
+    if(!isPlaying)return;
+    if(songIndex > 10)
+    {
+        songIndex -= 10;
+    }
+    else if(songIndex <= 10)
+    {
+        songIndex = 0;
+    }
+    changeTrack();
+}
+
 void MainWindow::onControlNext()
 {
     if(!isOpened)return;
@@ -270,6 +297,22 @@ void MainWindow::onControlNext()
     if(songIndex < gmeDecoder.GetTrackCount() - 1)
     {
         songIndex++;
+    }
+    changeTrack();
+}
+
+void MainWindow::onControlNextBy10()
+{
+    if(!isOpened)return;
+    if(!isPlaying)return;
+    int count = gmeDecoder.GetTrackCount() - 1;
+    if(songIndex < count - 10)
+    {
+        songIndex += 10;
+    }
+    else
+    {
+        songIndex = count;
     }
     changeTrack();
 }
@@ -349,7 +392,9 @@ void MainWindow::onAboutMenu()
     html = "<h2>BeefPlayer</h2>"
           "<p>Game Music Player</p>"
           "<p>Version: 0.95</p>"
-          "<p>Powered by <a href='https://github.com/libgme/game-music-emu'>libgme</a></p>"
-          "<p>Developed by: <b>kewen</b></p>";
+          "<p>Powered by <a href='https://github.com/libgme/game-music-emu'>libgme</a>"
+          "(LGPL licensed)</p>"
+          "<p>Developed by: <b>Kewen</b></p>"
+          "© 2026 Kewen";
     QMessageBox::about(this, "About", html);
 }

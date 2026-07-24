@@ -44,6 +44,7 @@ private:
     QLabel* label_Game;
     QLabel* label_Composer;
     QLabel* label_Company;
+    QLabel* label_CurTrack;
     QLabel* label_Tracks;
     QLineEdit* editGame;
     QLineEdit* editComposer;
@@ -65,7 +66,9 @@ private slots:
     void onActionClose();
     void onActionExit();
     void onControlPrev();
+    void onControlPrevBy10();
     void onControlNext();
+    void onControlNextBy10();
     void onControlPlayPause();
     void getAudioData();
     void onAudioStateChanged(QAudio::State state);
