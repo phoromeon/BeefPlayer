@@ -4,6 +4,8 @@
 #include <QMessageBox>
 #include <QtMultimedia/QAudioFormat>
 #include <QtMultimedia/QMediaDevices>
+#include <QMimeData>
+#include <QFileInfo>
 #include <QDebug>
 
 #define WINDOW_WIDTH 512
@@ -23,6 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("BeefPlayer");
 
     setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+    setAcceptDrops(true);
 
     createMenus();
     createComponents();
@@ -76,6 +79,7 @@ void MainWindow::createComponents()
 {
     central = new QWidget(this);
     setCentralWidget(central);
+    centralWidget()->setAcceptDrops(true);
     layout = new QGridLayout(central);
     layout->setContentsMargins(20, 20, 20, 20);
     layout->setSpacing(10);
@@ -115,7 +119,7 @@ void MainWindow::initDevice()
 
     // 创建定时器
     m_timer = new QTimer(this);
-    int delay = BYTES_PER_FRAME * 1000 / SAMPLE_RATE / 2;
+    int delay = SAMPLES_PER_FRAME * 1000 / SAMPLE_RATE / 2;
     m_timer->setInterval(delay);
     connect(m_timer, &QTimer::timeout, this, &MainWindow::getAudioData);
 
@@ -173,6 +177,44 @@ void MainWindow::changeTrack()
                               .arg(gmeDecoder.GetTrackCount()));
 }
 
+void MainWindow::openFile(const QString &filePath)
+{
+    // 如果已有文件打开，先清理
+    if (isOpened) {
+        cleanupPlayback();
+    }
+
+    // 加载文件
+    QByteArray ba = filePath.toLatin1();
+    char* filename = ba.data();
+
+    if (!gmeDecoder.LoadFile(filename)) {
+        QMessageBox::warning(this, "警告", "打开文件失败");
+        return;
+    }
+
+    // 更新状态和 UI
+    isOpened = true;
+    isPlaying = false;
+
+    songIndex = 0;
+    info = gmeDecoder.GetGameInfo();
+    editGame->setText(QString("%1").arg(info.game));
+    editComposer->setText(QString("%1").arg(info.author));
+    editCompany->setText(QString("%1").arg(info.copyright));
+    label_Tracks->setText(QString("%1/%2")
+                              .arg(songIndex + 1)
+                              .arg(gmeDecoder.GetTrackCount()));
+
+    // 开始播放
+    gmeDecoder.SetTrack(songIndex);
+    m_audioDevice = m_audioSink->start();
+    m_timer->start();
+    isPlaying = true;
+
+    qDebug() << "文件已打开:" << filePath;
+}
+
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
     qDebug() << "Key pressed:" << event->key();
@@ -199,6 +241,59 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         qDebug() << "Switch to Next song by 10.";
         break;
     }
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+    // 检查拖拽的数据是否包含文件路径
+    if (event->mimeData()->hasUrls())
+    {
+        // 获取第一个文件的路径
+        QList<QUrl> urls = event->mimeData()->urls();
+        if (!urls.isEmpty())
+        {
+            filePath = urls.first().toLocalFile();
+
+            // 检查文件扩展名（支持 .nsf 和 .gbs）
+            if (filePath.endsWith(".nsf", Qt::CaseInsensitive) ||
+                filePath.endsWith(".gbs", Qt::CaseInsensitive))
+            {
+                event->acceptProposedAction();  // 接受拖拽
+                qDebug() << "拖拽进入:" << filePath;
+                return;
+            }
+        }
+    }
+
+    // 不支持的文件格式，忽略拖拽
+    event->ignore();
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+    // 获取拖拽的文件路径
+    QList<QUrl> urls = event->mimeData()->urls();
+    if (urls.isEmpty())
+    {
+        event->ignore();
+        return;
+    }
+
+    filePath = urls.first().toLocalFile();
+    qDebug() << "拖拽释放:" << filePath;
+
+    // 检查文件是否支持
+    if (!filePath.endsWith(".nsf", Qt::CaseInsensitive) &&
+        !filePath.endsWith(".gbs", Qt::CaseInsensitive))
+    {
+        QMessageBox::warning(this, "不支持", "请拖拽 NSF 或 GBS 文件");
+        event->ignore();
+        return;
+    }
+
+    // 打开文件
+    openFile(filePath);
+    event->acceptProposedAction();
 }
 
 void MainWindow::onActionOpen()
@@ -357,7 +452,7 @@ void MainWindow::getAudioData()
     }
 
     // 转换为 QByteArray
-    int byteCount = BYTES_PER_FRAME * sizeof(short);
+    int byteCount = SAMPLES_PER_FRAME * sizeof(short);
     QByteArray audioData(reinterpret_cast<const char*>(pcm), byteCount);
 
     // 写入音频设备

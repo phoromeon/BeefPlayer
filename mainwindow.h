@@ -9,6 +9,8 @@
 #include <QTimer>
 #include <QtMultimedia/QAudioSink>
 #include <QKeyEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include "GmeDecoder.h"
 
 QT_BEGIN_NAMESPACE
@@ -29,8 +31,11 @@ public:
     void initDevice();
     void cleanupPlayback();
     void changeTrack();
+    void openFile(const QString &filePath);
 protected:
-    void keyPressEvent(QKeyEvent*);
+    void keyPressEvent(QKeyEvent*) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 private:
     //compounents

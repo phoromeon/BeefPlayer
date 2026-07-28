@@ -62,26 +62,37 @@ bool GmeDecoder::SetTrack(int index)
 
 short *GmeDecoder::OutputData()
 {
-    if(emu)
-    {
-        err = gme_play(emu, BYTES_PER_FRAME, _pcm);
-        return _pcm;
+    if (!emu) return nullptr;
+
+    err = gme_play(emu, SAMPLES_PER_FRAME, _pcm);
+    if (err) {
+        qDebug() << "gme_play error:" << err;
+        return nullptr;  // 返回静音数据
     }
-    else
-    {
-        qDebug() << "Music Emulator hasn't been initialized.";
-        return nullptr;
-    }
+    return _pcm;
 }
 //
 game_info_t GmeDecoder::GetGameInfo()
 {
     game_info_t game_info;
-    game_info.game = info->game;
-    game_info.system = info->system;
-    game_info.author = info->author;
-    game_info.copyright = info->copyright;
+    if(info)
+    {
+        game_info.game = info->game;
+        game_info.system = info->system;
+        game_info.author = info->author;
+        game_info.copyright = info->copyright;
+    }
     return game_info;
+}
+
+int GmeDecoder::GetPosition() const
+{
+    return emu ? gme_tell(emu) : 0;  // 返回当前采样数
+}
+
+int GmeDecoder::GetTrackLength() const
+{
+    return info ? info->length : 0;  // 返回总采样数
 }
 
 
@@ -90,7 +101,10 @@ void GmeDecoder::Close()
     if(emu)
     {
         if(info)
+        {
             gme_free_info(info);
+            info = nullptr;
+        }
         gme_delete(emu);
         emu = nullptr;
     }
